@@ -1,0 +1,48 @@
+# Helm values for prometheus-community/kube-prometheus-stack.
+# Trimmed for a demo cluster. Install:
+#   helm install kube-prom-stack prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace -f kube-prometheus-stack.values.yaml
+
+grafana:
+  enabled: true
+  adminPassword: "prom-operator"   # DEMO ONLY — change / use a secret for real use
+  defaultDashboardsEnabled: true
+  service:
+    type: ClusterIP                # port-forward to reach it
+
+prometheus:
+  prometheusSpec:
+    retention: 6h                  # short retention for a demo
+    resources:
+      requests: { cpu: "100m", memory: "256Mi" }
+      limits: { cpu: "500m", memory: "512Mi" }
+    # Scrape pods that carry prometheus.io/scrape annotations (our services do).
+    additionalScrapeConfigs:
+      - job_name: annotated-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+
+alertmanager:
+  enabled: true
+  # Wire Slack here later — see the reference project's Alertmanager config.
+  # config:
+  #   route:
+  #     receiver: slack
+  #   receivers:
+  #     - name: slack
+  #       slack_configs:
+  #         - api_url: <SLACK_WEBHOOK>
+  #           channel: "#alerts"

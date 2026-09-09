@@ -1,0 +1,80 @@
+name: CI
+
+# Build only the services whose source changed, scan the image with Trivy,
+# and push to GitHub Container Registry (GHCR) tagged sha-<commit>.
+on:
+  push:
+    branches: [main]
+    paths: ["src/**"]
+  pull_request:
+    paths: ["src/**"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write   # push to GHCR using the built-in GITHUB_TOKEN
+
+jobs:
+  # 1) Figure out which services changed.
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend: src/frontend/**
+            product-catalog: src/product-catalog/**
+            cart: src/cart/**
+
+  # 2) Build + scan + push each changed service.
+  build:
+    needs: detect
+    if: needs.detect.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image ref
+        id: img
+        run: |
+          echo "ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image (load locally for scanning)
+        uses: docker/build-push-action@v6
+        with:
+          context: src/${{ matrix.service }}
+          push: false
+          load: true
+          tags: ${{ steps.img.outputs.ref }}
+
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ steps.img.outputs.ref }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Push image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: src/${{ matrix.service }}
+          push: true
+          tags: ${{ steps.img.outputs.ref }}

@@ -1,0 +1,38 @@
+# One entry per service. Templates range over this map, so adding a service is just
+# adding a block here — no new template files.
+namespace: gitops-demo
+
+imageRegistry: ghcr.io/mahesh1995
+imageTag: dev
+imagePullPolicy: IfNotPresent
+
+services:
+  frontend:
+    port: 8080
+    servicePort: 80
+    replicas: 1
+    env:
+      PRODUCT_CATALOG_ADDR: "product-catalog:5000"
+      CART_ADDR: "cart:3000"
+    resources:
+      requests: { cpu: "25m", memory: "32Mi" }
+      limits: { cpu: "100m", memory: "64Mi" }
+
+  product-catalog:
+    port: 5000
+    servicePort: 5000
+    replicas: 1
+    env: {}
+    resources:
+      requests: { cpu: "25m", memory: "64Mi" }
+      limits: { cpu: "150m", memory: "128Mi" }
+
+  cart:
+    port: 3000
+    servicePort: 3000
+    replicas: 1
+    env:
+      REDIS_ADDR: "redis:6379"
+    resources:
+      requests: { cpu: "25m", memory: "48Mi" }
+      limits: { cpu: "100m", memory: "96Mi" }

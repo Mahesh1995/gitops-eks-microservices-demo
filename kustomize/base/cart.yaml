@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+  labels:
+    app.kubernetes.io/name: cart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cart
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cart
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: cart
+          image: ghcr.io/mahesh1995/cart:dev
+          ports:
+            - containerPort: 3000
+          env:
+            - name: REDIS_ADDR
+              value: "redis:6379"
+          resources:
+            requests: { cpu: "25m", memory: "48Mi" }
+            limits: { cpu: "100m", memory: "96Mi" }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 3000 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /readyz, port: 3000 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart
+  labels:
+    app.kubernetes.io/name: cart
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cart
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

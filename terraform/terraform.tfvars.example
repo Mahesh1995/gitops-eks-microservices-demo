@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and edit. terraform.tfvars is gitignored (never commit it).
+region          = "ap-south-1"
+environment     = "dev"
+cluster_name    = "gitops-demo"
+cluster_version = "1.30"
+
+vpc_cidr            = "10.0.0.0/16"
+node_instance_types = ["t3.medium"]
+node_desired_size   = 2
+node_min_size       = 1
+node_max_size       = 3

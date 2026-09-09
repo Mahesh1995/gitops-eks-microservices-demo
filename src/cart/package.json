@@ -1,0 +1,17 @@
+{
+  "name": "cart",
+  "version": "1.0.0",
+  "description": "Cart microservice (Express + optional Redis) for the GitOps EKS demo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,22 @@
+# An ArgoCD AppProject scopes what its Applications may deploy and where.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: gitops-demo
+  namespace: argocd
+spec:
+  description: GitOps EKS microservices demo
+  # Which Git repos apps in this project may sync from.
+  sourceRepos:
+    - "https://github.com/Mahesh1995/gitops-eks-microservices-demo.git"
+  # Which clusters/namespaces apps may deploy to.
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: gitops-demo
+  # Allow the resource kinds this demo needs.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

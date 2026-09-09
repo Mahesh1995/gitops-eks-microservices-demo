@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gitops-demo
+description: Helm packaging for the GitOps EKS microservices demo (alternative to Kustomize)
+type: application
+version: 0.1.0        # chart version
+appVersion: "1.0.0"   # app version

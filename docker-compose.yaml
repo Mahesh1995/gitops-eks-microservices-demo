@@ -1,0 +1,33 @@
+# Module 0: run the entire app locally, no Kubernetes needed.
+#   docker compose up --build   →   http://localhost:8080
+services:
+  product-catalog:
+    build: ./src/product-catalog
+    ports: ["5000:5000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/healthz').status==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  cart:
+    build: ./src/cart
+    ports: ["3000:3000"]
+    environment:
+      REDIS_ADDR: "redis:6379"     # remove to use in-memory fallback
+    depends_on:
+      - redis
+
+  frontend:
+    build: ./src/frontend
+    ports: ["8080:8080"]
+    environment:
+      PRODUCT_CATALOG_ADDR: "product-catalog:5000"
+      CART_ADDR: "cart:3000"
+    depends_on:
+      - product-catalog
+      - cart

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Everything lands in the gitops-demo namespace.
+namespace: gitops-demo
+
+resources:
+  - ../../base
+
+# Dev image tags. CI pushes ghcr.io/<owner>/<svc>:sha-<commit>; for dev we track :dev.
+# (Argo Image Updater or a CI bump can rewrite these — see docs stretch goals.)
+images:
+  - name: ghcr.io/mahesh1995/frontend
+    newTag: dev
+  - name: ghcr.io/mahesh1995/product-catalog
+    newTag: dev
+  - name: ghcr.io/mahesh1995/cart
+    newTag: dev
+
+# Dev-only config: verbose logging, single replicas (inherited from base).
+patches:
+  - target:
+      kind: Deployment
+      name: frontend
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: LOG_LEVEL
+          value: debug

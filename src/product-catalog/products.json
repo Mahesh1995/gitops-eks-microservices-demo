@@ -1,0 +1,32 @@
+[
+  {
+    "id": "OLJCESPC7Z",
+    "name": "Vintage Typewriter",
+    "description": "A restored mechanical typewriter for the analog writer.",
+    "price_usd": 67.99
+  },
+  {
+    "id": "66VCHSJNUP",
+    "name": "Terraform Sticker Pack",
+    "description": "Ten glossy HashiCorp-inspired laptop stickers.",
+    "price_usd": 8.50
+  },
+  {
+    "id": "1YMWWN1N4O",
+    "name": "Kubernetes Mug",
+    "description": "350ml ceramic mug. Holds coffee and cluster secrets.",
+    "price_usd": 14.00
+  },
+  {
+    "id": "L9ECAV7KIM",
+    "name": "ArgoCD Hoodie",
+    "description": "Cozy hoodie for late-night GitOps reconciliations.",
+    "price_usd": 49.95
+  },
+  {
+    "id": "2ZYFJ3GM2N",
+    "name": "Observability Notebook",
+    "description": "Dotted-grid notebook for dashboards and runbooks.",
+    "price_usd": 11.25
+  }
+]

@@ -1,0 +1,46 @@
+# A single-replica Redis for the cart service. This is a DEMO deployment (ephemeral,
+# no persistence). For a real setup use a StatefulSet + PVC, or a managed cache
+# (e.g. AWS ElastiCache). See docs/architecture.md → stretch goals.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app.kubernetes.io/name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "100m", memory: "128Mi" }
+          livenessProbe:
+            tcpSocket: { port: 6379 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    app.kubernetes.io/name: redis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
