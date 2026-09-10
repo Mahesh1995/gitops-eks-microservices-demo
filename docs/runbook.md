@@ -32,7 +32,12 @@ curl -s localhost:5000/products | jq .
 curl -s -XPOST localhost:3000/cart/alice/items -d '{"product_id":"OLJCESPC7Z","qty":2}' -H 'content-type: application/json'
 curl -s localhost:3000/cart/alice | jq .
 curl -s localhost:8080/healthz
+# checkout turns alice's cart into a priced order:
+curl -s -XPOST localhost:4000/checkout/alice | jq .
 ```
+
+> To run `checkout` natively (Option B), start it with:
+> `cd src/checkout && CART_ADDR=localhost:3000 PRODUCT_CATALOG_ADDR=localhost:5000 go run .`  (:4000)
 
 ## Module 1 — CI to GHCR
 
@@ -111,6 +116,45 @@ helm install kube-prom-stack prometheus-community/kube-prometheus-stack \
 kubectl -n monitoring port-forward svc/kube-prom-stack-grafana 3001:80
 # Grafana: http://localhost:3001  (admin / prom-operator by default)
 ```
+
+## Module 6 — Expose it (Gateway API + External DNS)
+
+> AWS-only; requires the EKS cluster from Module 3 and the IRSA roles from
+> `terraform/irsa.tf` (run `terraform apply` again if you added them after Module 3).
+
+```bash
+# Role ARNs created by Terraform:
+cd terraform
+LBC_ROLE=$(terraform output -raw aws_lb_controller_role_arn)
+EDNS_ROLE=$(terraform output -raw external_dns_role_arn)
+cd ..
+
+# 1. Gateway API CRDs
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
+
+# 2. AWS Load Balancer Controller (v2.13+ for Gateway API support), via Helm + IRSA
+helm repo add eks https://aws.github.io/eks-charts && helm repo update
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName="$(cd terraform && terraform output -raw cluster_name)" \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set "serviceAccount.annotations.eks\.amazonaws\.com/role-arn=${LBC_ROLE}"
+
+# 3. The Gateway + route (edit the hostname in gateway-api/httproute.yaml first)
+kubectl apply -f gateway-api/gatewayclass.yaml
+kubectl apply -f gateway-api/gateway.yaml
+kubectl apply -f gateway-api/httproute.yaml
+kubectl -n gitops-demo get gateway shop-gateway -o wide   # wait for the ALB address
+
+# 4. External DNS (put $EDNS_ROLE on the SA + set --domain-filter in the manifest)
+kubectl apply -f external-dns/external-dns.yaml
+kubectl -n external-dns logs deploy/external-dns -f       # watch it create the Route53 record
+```
+
+Then browse to your hostname (e.g. `http://shop.example.com`). Tear down the ALB by
+deleting the Gateway (`kubectl delete -f gateway-api/gateway.yaml`) before
+`terraform destroy`, so no load balancer is orphaned.
 
 ## Common issues
 

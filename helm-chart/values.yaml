@@ -36,3 +36,14 @@ services:
     resources:
       requests: { cpu: "25m", memory: "48Mi" }
       limits: { cpu: "100m", memory: "96Mi" }
+
+  checkout:
+    port: 4000
+    servicePort: 4000
+    replicas: 1
+    env:
+      CART_ADDR: "cart:3000"
+      PRODUCT_CATALOG_ADDR: "product-catalog:5000"
+    resources:
+      requests: { cpu: "25m", memory: "32Mi" }
+      limits: { cpu: "100m", memory: "64Mi" }

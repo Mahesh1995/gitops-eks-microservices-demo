@@ -1,0 +1,12 @@
+# GatewayClass tells Kubernetes which controller implements Gateways of this class.
+# Here we use the AWS Load Balancer Controller's Gateway API support, which provisions
+# an AWS Application Load Balancer (ALB) for each Gateway.
+#
+# Requires: AWS Load Balancer Controller v2.13+ installed with Gateway API CRDs.
+# See ../docs/runbook.md (Module 7) for the install steps and IRSA setup.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aws-alb
+spec:
+  controllerName: gateway.k8s.aws/alb

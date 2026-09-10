@@ -15,9 +15,10 @@ logic.
 
 | Service           | Language        | Responsibility                                  | Port |
 |-------------------|-----------------|-------------------------------------------------|------|
-| `frontend`        | Go (net/http)   | Serves the UI, aggregates the two backends      | 8080 |
+| `frontend`        | Go (net/http)   | Serves the UI, aggregates the backends          | 8080 |
 | `product-catalog` | Python / Flask  | Returns the product list from a JSON file       | 5000 |
 | `cart`            | Node.js/Express | Add/list cart items, optional Redis persistence | 3000 |
+| `checkout`        | Go (net/http)   | Reads the cart, prices it, returns an order     | 4000 |
 
 All communication is REST/JSON over HTTP. Each service exposes:
 
@@ -36,15 +37,16 @@ focused, high-value exercise (Module 6).
 
 ```
 Browser
-  │  GET /
-  ▼
-frontend (Go)
-  ├─ GET  product-catalog:5000/products   → list of products
-  └─ POST cart:3000/cart/{user}/items      → add to cart
-        cart ──(optional)── Redis          → persistence
+  │  GET /                        │  POST /api/checkout  (via ALB → checkout)
+  ▼                               ▼
+frontend (Go)                   checkout (Go)
+  ├─ GET  product-catalog/products   ├─ GET cart:3000/cart/{user}      → items
+  └─ POST cart/{user}/items          └─ GET product-catalog/products/{id} → price
+        cart ──(optional)── Redis     → sums line totals → order
 ```
 
 Only `cart` is stateful, and even then Redis is optional (it falls back to in-memory).
+`checkout` is a pure orchestrator — it holds no state, it just fans out to the other two.
 This mirrors the reference's deliberate choice: keep services stateless so the platform,
 not the data layer, is what you study.
 
@@ -84,15 +86,25 @@ not the data layer, is what you study.
 
 ArgoCD runs one `Application` per environment (only `dev` is wired by default).
 
-## Stretch goals (Module 6)
+## Ingress & DNS (included — Module 6)
 
-- Switch `frontend ↔ product-catalog` to **gRPC** with a shared `.proto`.
+L7 ingress and DNS are wired in:
+
+- **Gateway API + AWS Load Balancer Controller** (`gateway-api/`): a `GatewayClass` +
+  `Gateway` provisions an ALB; an `HTTPRoute` routes `/api/checkout` → `checkout` and
+  `/` → `frontend`.
+- **External DNS** (`external-dns/`): watches the HTTPRoute's hostnames and keeps Route53
+  records pointing at the ALB.
+- Both authenticate via **IRSA** roles defined in `terraform/irsa.tf` (no static keys).
+
+## Stretch goals (Module 7)
+
+- Switch `frontend`/`checkout` ↔ backends to **gRPC** with a shared `.proto`.
 - Add **Redis** as a real dependency with a StatefulSet + PVC.
-- Add **AWS Load Balancer Controller + Gateway API** for L7 ingress.
-- Add **External DNS** to manage Route53 records from `HTTPRoute` annotations.
 - Add **Argo Image Updater** so new GHCR tags auto-bump the overlay.
 - Add a **canary** rollout with Argo Rollouts.
 - Move Terraform state to an **S3 backend + DynamoDB lock**.
+- Add an **HTTPS listener** on the Gateway with an ACM certificate.
 
 ## Security notes (learning, not hardening)
 

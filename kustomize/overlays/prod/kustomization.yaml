@@ -15,6 +15,8 @@ images:
     newTag: sha-REPLACE_ME
   - name: ghcr.io/mahesh1995/cart
     newTag: sha-REPLACE_ME
+  - name: ghcr.io/mahesh1995/checkout
+    newTag: sha-REPLACE_ME
 
 # Prod runs 2 replicas of the stateless services (HPA can scale further).
 replicas:
@@ -23,6 +25,8 @@ replicas:
   - name: product-catalog
     count: 2
   - name: cart
+    count: 2
+  - name: checkout
     count: 2
 
 # Tighten logging to info in prod.

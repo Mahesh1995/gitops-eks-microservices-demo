@@ -1,0 +1,31 @@
+# A Gateway is the actual entry point. The AWS LB Controller sees this and provisions
+# an internet-facing ALB with an HTTP :80 listener.
+#
+# The `alb.gateway.k8s.aws/*` annotations are how you configure the ALB (scheme, target
+# type, and — for HTTPS — an ACM certificate). Start with HTTP; add the HTTPS listener
+# and certificate-arn once you have a cert in ACM.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shop-gateway
+  namespace: gitops-demo
+  annotations:
+    alb.gateway.k8s.aws/scheme: internet-facing
+    alb.gateway.k8s.aws/target-type: ip
+spec:
+  gatewayClassName: aws-alb
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    # To serve HTTPS, request a cert in ACM, then uncomment and set certificate ARNs
+    # via the alb.gateway.k8s.aws/certificate-arns annotation above.
+    # - name: https
+    #   protocol: HTTPS
+    #   port: 443
+    #   allowedRoutes:
+    #     namespaces:
+    #       from: Same

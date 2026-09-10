@@ -22,6 +22,16 @@ services:
     depends_on:
       - redis
 
+  checkout:
+    build: ./src/checkout
+    ports: ["4000:4000"]
+    environment:
+      CART_ADDR: "cart:3000"
+      PRODUCT_CATALOG_ADDR: "product-catalog:5000"
+    depends_on:
+      - cart
+      - product-catalog
+
   frontend:
     build: ./src/frontend
     ports: ["8080:8080"]

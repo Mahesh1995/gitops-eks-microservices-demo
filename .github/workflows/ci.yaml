@@ -29,6 +29,7 @@ jobs:
             frontend: src/frontend/**
             product-catalog: src/product-catalog/**
             cart: src/cart/**
+            checkout: src/checkout/**
 
   # 2) Build + scan + push each changed service.
   build:

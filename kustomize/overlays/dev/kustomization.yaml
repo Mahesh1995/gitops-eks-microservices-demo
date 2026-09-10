@@ -16,6 +16,8 @@ images:
     newTag: dev
   - name: ghcr.io/mahesh1995/cart
     newTag: dev
+  - name: ghcr.io/mahesh1995/checkout
+    newTag: dev
 
 # Dev-only config: verbose logging, single replicas (inherited from base).
 patches:

@@ -6,7 +6,7 @@ AWS EKS. It mirrors the architecture and tooling of a full production-grade setu
 scale you can read in an afternoon and grow one module at a time.
 
 > Inspired by the "Online Boutique" style GitOps demos, deliberately scaled down to
-> **3 small polyglot services** so the *platform* concerns (IaC, GitOps, CI/CD,
+> **4 small polyglot services** so the *platform* concerns (IaC, GitOps, CI/CD,
 > networking, observability) stay front and centre — not the app code.
 
 ---
@@ -20,11 +20,14 @@ scale you can read in an afternoon and grow one module at a time.
 | Packaging        | Kustomize (base + overlays), Helm      | `kustomize/`, `helm-chart/` |
 | GitOps           | ArgoCD (App-of-nothing, points at Git) | `argocd/`                |
 | CI/CD            | GitHub Actions (build → scan → push)   | `.github/workflows/`     |
+| Ingress (L7)     | Gateway API → AWS ALB                   | `gateway-api/`           |
+| DNS              | External DNS → Route53                  | `external-dns/`          |
 | Observability    | kube-prometheus-stack (Helm values)    | `observability/`         |
 
 ### The application
 
-A trivial shopping demo. The **frontend** aggregates data from two backends:
+A trivial shopping demo. The **frontend** aggregates the backends, and **checkout**
+orchestrates cart + product-catalog to turn a cart into a priced order:
 
 ```
                 +-------------------+
@@ -36,7 +39,13 @@ A trivial shopping demo. The **frontend** aggregates data from two backends:
    +---------v---------+     +----------v----------+
    | product-catalog   |     | cart (Node.js)      |
    | (Python / Flask)  |     | + Redis (optional)  |
-   +-------------------+     +---------------------+
+   +---------^---------+     +----------^----------+
+             |                          |
+             +-----------+--------------+
+                         |
+                +--------+---------+
+                | checkout (Go)    |  POST /checkout/{user} -> priced order
+                +------------------+
 ```
 
 REST (not gRPC) is used on purpose — it keeps the services readable. The production
@@ -62,9 +71,12 @@ and leaves you with something that runs.
   let Git become the single source of truth. Change a replica count in Git → watch it sync.
 - **Module 5 — Observability.** Install kube-prometheus-stack with
   `observability/kube-prometheus-stack.values.yaml`. Explore Grafana dashboards & alerts.
-- **Module 6 — Grow it.** Add a 4th service, switch REST→gRPC, add Redis persistence,
-  wire External DNS + Gateway API, add a prod overlay difference. See `docs/architecture.md`
-  for stretch goals.
+- **Module 6 — Expose it (Gateway API + DNS).** Install the AWS Load Balancer Controller
+  and Gateway API CRDs (IRSA from `terraform/irsa.tf`), apply `gateway-api/` to provision an
+  ALB, then deploy `external-dns/` so a real hostname in Route53 points at it automatically.
+- **Module 7 — Grow it further.** Switch REST→gRPC, add Redis persistence, add Argo Image
+  Updater, try a canary with Argo Rollouts, move Terraform state to S3. See
+  `docs/architecture.md` for stretch goals.
 
 ---
 
@@ -92,13 +104,16 @@ Full step-by-step (including the AWS EKS path) is in [`docs/runbook.md`](docs/ru
 ├── src/                     # microservice source + Dockerfiles
 │   ├── frontend/            # Go — web UI + API gateway
 │   ├── product-catalog/     # Python/Flask — product data
-│   └── cart/                # Node.js/Express — cart (+ Redis)
+│   ├── cart/                # Node.js/Express — cart (+ Redis)
+│   └── checkout/            # Go — order orchestration
 ├── kustomize/               # GitOps source of truth
 │   ├── base/                # shared manifests
 │   └── overlays/{dev,prod}/ # per-environment patches
 ├── helm-chart/              # alternative packaging (learn Helm)
 ├── argocd/                  # ArgoCD Project + Application
-├── terraform/               # AWS VPC + EKS
+├── terraform/               # AWS VPC + EKS + IRSA roles
+├── gateway-api/             # Gateway API → AWS ALB (L7 ingress)
+├── external-dns/            # External DNS → Route53
 ├── observability/           # Prometheus/Grafana stack values
 ├── .github/workflows/       # CI: build → Trivy scan → push to GHCR
 ├── docs/                    # architecture + runbook

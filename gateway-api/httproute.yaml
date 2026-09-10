@@ -1,0 +1,32 @@
+# HTTPRoute is L7 routing: it attaches to the Gateway and maps request paths/hosts to
+# backend Services. External DNS watches the `hostnames` here and creates the matching
+# Route53 A/ALIAS record pointing at the ALB.
+#
+# Replace shop.example.com with a hostname in a Route53 hosted zone you control.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: shop-route
+  namespace: gitops-demo
+spec:
+  parentRefs:
+    - name: shop-gateway
+  hostnames:
+    - "shop.example.com" # <-- change to your domain
+  rules:
+    # /api/checkout -> checkout service
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/checkout
+      backendRefs:
+        - name: checkout
+          port: 4000
+    # everything else -> frontend
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend
+          port: 80

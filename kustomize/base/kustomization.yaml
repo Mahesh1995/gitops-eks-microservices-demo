@@ -12,4 +12,5 @@ resources:
   - frontend.yaml
   - product-catalog.yaml
   - cart.yaml
+  - checkout.yaml
   - redis.yaml
